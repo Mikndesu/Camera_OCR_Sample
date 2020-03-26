@@ -3,10 +3,12 @@ package com.mikn.camera_sample
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.Manifest
+import android.content.Intent
 import android.view.TextureView
 import java.util.concurrent.Executors
 import android.content.pm.PackageManager
 import android.graphics.Matrix
+import android.os.AsyncTask
 import android.util.Log
 import android.util.Size
 import android.view.Surface
@@ -16,7 +18,13 @@ import android.widget.Toast
 import androidx.camera.core.*
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.content.ContextCompat.startActivity
+import com.github.kittinunf.fuel.Fuel
+import com.github.kittinunf.fuel.httpGet
+import com.github.kittinunf.result.Result
 import java.io.File
+import java.io.FileOutputStream
+import java.net.URL
 
 private const val REQUEST_PERMISSIONS = 10
 private val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA)
@@ -26,29 +34,51 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+//        downloadComponentTask().execute()
+        a()
         viewFinder = findViewById(R.id.view_finder)
-        if(allPermissionsGranted()) {
+        if (allPermissionsGranted()) {
             viewFinder.post {
                 startCamera()
             }
         } else {
             ActivityCompat.requestPermissions(
-                    this, REQUIRED_PERMISSIONS, REQUEST_PERMISSIONS
+                this, REQUIRED_PERMISSIONS, REQUEST_PERMISSIONS
             )
         }
 
-        viewFinder.addOnLayoutChangeListener {  _, _, _, _, _, _, _, _, _ ->
+        viewFinder.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
             updateTransform()
+        }
+
+//    inner class downloadComponentTask : AsyncTask<Void, Void, String>() {
+//        override fun doInBackground(vararg params: Void?): String? {
+////            val filePath =
+////                File(applicationContext.filesDir.toString() + "/tessdata/eng.traineddata")
+////            if (!filePath.exists()) {
+////                "https://raw.githubusercontent.com/tesseract-ocr/tessdata_best/master/eng.traineddata".httpGet().response().toString()
+////                println("a")
+////            }
+//            return null
+//        }
+//    }
+
+
+
+//    override fun onDestroy() {
+//        super.onDestroy()
+
+    }
+
+    private fun a() {
+        val file = File(applicationContext.filesDir.toString()+"/tessdata/")
+        if(!file.exists()) {
+            file.mkdir()
         }
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-
-    }
-
     private val executor = Executors.newSingleThreadExecutor()
-    private lateinit var viewFinder : TextureView
+    private lateinit var viewFinder: TextureView
 
     private fun startCamera() {
         val previewConfig = PreviewConfig.Builder().apply {
@@ -72,9 +102,11 @@ class MainActivity : AppCompatActivity() {
         val imageCapture = ImageCapture(imageCaptureConfig)
 
         findViewById<ImageButton>(R.id.capture_button).setOnClickListener {
-            val file = File(applicationContext.filesDir, "${System.currentTimeMillis()}.jpg")
+            val savedPath =
+                (applicationContext.cacheDir.toString()) + "/" + (System.currentTimeMillis().toString()) + ".jpg";
+            val file = File(savedPath)
             imageCapture.takePicture(file, executor,
-                object: ImageCapture.OnImageSavedListener {
+                object : ImageCapture.OnImageSavedListener {
                     override fun onError(
                         imageCaptureError: ImageCapture.ImageCaptureError,
                         message: String,
@@ -93,6 +125,9 @@ class MainActivity : AppCompatActivity() {
                         viewFinder.post {
                             Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
                         }
+                        val intent = Intent(applicationContext, DisplayImageActivity::class.java)
+                        intent.putExtra("path", savedPath)
+                        startActivity(intent)
                     }
                 })
         }
@@ -102,14 +137,14 @@ class MainActivity : AppCompatActivity() {
     private fun updateTransform() {
         val matrix = Matrix()
 
-        val centerX = viewFinder.width/2f
-        val centerY = viewFinder.height/2f
+        val centerX = viewFinder.width / 2f
+        val centerY = viewFinder.height / 2f
 
-        val rotationDegress = when(viewFinder.display.rotation) {
-            Surface.ROTATION_0 -> 0
-            Surface.ROTATION_90 -> 90
-            Surface.ROTATION_180 -> 180
-            Surface.ROTATION_270 -> 270
+        val rotationDegress = when (viewFinder.display.rotation) {
+//            Surface.ROTATION_0 -> 0
+//            Surface.ROTATION_90 -> 90
+//            Surface.ROTATION_180 -> 180
+//            Surface.ROTATION_270 -> 270
             else -> return
         }
         matrix.postRotate(-rotationDegress.toFloat(), centerX, centerY)
@@ -117,19 +152,26 @@ class MainActivity : AppCompatActivity() {
         viewFinder.setTransform(matrix)
     }
 
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
-        if(requestCode == REQUEST_PERMISSIONS) {
-            if(allPermissionsGranted()) {
-                viewFinder.post{startCamera()}
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<String>,
+        grantResults: IntArray
+    ) {
+        if (requestCode == REQUEST_PERMISSIONS) {
+            if (allPermissionsGranted()) {
+                viewFinder.post { startCamera() }
             }
         } else {
-            Toast.makeText(this,
-                    "Permissions aren't granted",
-                    Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                this,
+                "Permissions aren't granted",
+                Toast.LENGTH_SHORT
+            ).show()
         }
     }
 
     private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
         ContextCompat.checkSelfPermission(baseContext, it) == PackageManager.PERMISSION_GRANTED
     }
+
 }
