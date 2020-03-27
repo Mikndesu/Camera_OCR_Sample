@@ -23,6 +23,7 @@ class TesseractActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_tesseract)
         savedPath = this.intent.getStringExtra("path")
+        tessOCR().execute()
     }
 
     inner class tessOCR : AsyncTask<Void, Void, String>() {
