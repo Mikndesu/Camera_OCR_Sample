@@ -1,30 +1,27 @@
 package com.mikn.camera_sample
 
-import androidx.appcompat.app.AppCompatActivity
-import android.os.Bundle
 import android.Manifest
+import android.content.Context
 import android.content.Intent
-import android.view.TextureView
-import java.util.concurrent.Executors
 import android.content.pm.PackageManager
 import android.graphics.Matrix
 import android.os.AsyncTask
+import android.os.Bundle
 import android.util.Log
 import android.util.Size
-import android.view.Surface
+import android.view.TextureView
 import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.*
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.ContextCompat.startActivity
-import com.github.kittinunf.fuel.Fuel
 import com.github.kittinunf.fuel.httpGet
 import com.github.kittinunf.result.Result
 import java.io.File
-import java.io.FileOutputStream
-import java.net.URL
+import java.util.concurrent.Executors
 
 private const val REQUEST_PERMISSIONS = 10
 private val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA)
@@ -34,8 +31,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-//        downloadComponentTask().execute()
-        a()
+        isTrainDataExists()
         viewFinder = findViewById(R.id.view_finder)
         if (allPermissionsGranted()) {
             viewFinder.post {
@@ -50,31 +46,32 @@ class MainActivity : AppCompatActivity() {
         viewFinder.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
             updateTransform()
         }
-
-//    inner class downloadComponentTask : AsyncTask<Void, Void, String>() {
-//        override fun doInBackground(vararg params: Void?): String? {
-////            val filePath =
-////                File(applicationContext.filesDir.toString() + "/tessdata/eng.traineddata")
-////            if (!filePath.exists()) {
-////                "https://raw.githubusercontent.com/tesseract-ocr/tessdata_best/master/eng.traineddata".httpGet().response().toString()
-////                println("a")
-////            }
-//            return null
-//        }
-//    }
-
-
-
-//    override fun onDestroy() {
-//        super.onDestroy()
-
     }
 
-    private fun a() {
-        val file = File(applicationContext.filesDir.toString()+"/tessdata/")
-        if(!file.exists()) {
-            file.mkdir()
+    private fun isTrainDataExists(): Unit {
+        val target_url =
+            "https://raw.githubusercontent.com/tesseract-ocr/tessdata_best/master/eng.traineddata"
+        val httpasync = target_url.httpGet().response { request, response, result ->
+            when (result) {
+                is Result.Success -> {
+                    val data = result.get()
+                    if (!File(applicationContext.filesDir.toString() + "/tessdata/").mkdir()) {
+                        Log.d("Don't Exist", "files/tessdata")
+                    }
+                    if (!File(applicationContext.filesDir.toString() + "/tessdata/eng.traineddata").createNewFile()) {
+                        Log.d("Don't exist", "tessdata/eng.trainddata")
+                        File(applicationContext.filesDir.toString() + "/tessdata/eng.traineddata").writeBytes(
+                            data
+                        )
+                    }
+                }
+                is Result.Failure -> {
+                    Log.e("Error:", "Unable Start to Download File")
+                }
+            }
         }
+
+        httpasync.join()
     }
 
     private val executor = Executors.newSingleThreadExecutor()
@@ -103,7 +100,8 @@ class MainActivity : AppCompatActivity() {
 
         findViewById<ImageButton>(R.id.capture_button).setOnClickListener {
             val savedPath =
-                (applicationContext.cacheDir.toString()) + "/" + (System.currentTimeMillis().toString()) + ".jpg";
+                (applicationContext.cacheDir.toString()) + "/" + (System.currentTimeMillis()
+                    .toString()) + ".jpg";
             val file = File(savedPath)
             imageCapture.takePicture(file, executor,
                 object : ImageCapture.OnImageSavedListener {
@@ -173,5 +171,4 @@ class MainActivity : AppCompatActivity() {
     private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
         ContextCompat.checkSelfPermission(baseContext, it) == PackageManager.PERMISSION_GRANTED
     }
-
 }

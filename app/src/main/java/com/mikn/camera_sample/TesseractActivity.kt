@@ -17,7 +17,7 @@ import java.io.InputStream
 class TesseractActivity : AppCompatActivity() {
 
     private lateinit var savedPath:String
-    private lateinit var tessResult:String
+    private var tessResult:String = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -44,7 +44,6 @@ class TesseractActivity : AppCompatActivity() {
                 matrix.setRotate(90F, ((imageWidth/2).toFloat()), (imageHeight/2).toFloat())
                 val bitMap2 = Bitmap.createBitmap(bitMap, 0, 0, imageWidth, imageHeight, matrix, true)
                 baseApi.setImage(bitMap2)
-                tessResult = baseApi.utF8Text
                 baseApi.end()
                 inputStream.close()
             } catch (e: FileNotFoundException) {
